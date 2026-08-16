@@ -1,0 +1,21 @@
+{
+  "name": "@imora/bot-store",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo 'bot-store: eslint wired in a later PR'"
+  },
+  "dependencies": {
+    "@imora/shared-types": "workspace:*",
+    "grammy": "^1.36.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

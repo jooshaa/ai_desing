@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: Imora Catalog API
+  version: 0.1.0
+  description: Catalog module — stores, categories, products, prices. Owner Abdumalik Najot.
+servers:
+  - url: http://localhost:3001/api
+tags:
+  - name: Catalog
+  - name: Store
+  - name: Admin
+paths:
+  /categories:
+    get:
+      tags: [Catalog]
+      summary: Category tree
+      responses:
+        '200':
+          description: Nested categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+  /products:
+    get:
+      tags: [Catalog]
+      parameters:
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+  /products/{id}:
+    get:
+      tags: [Catalog]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /store/products:
+    post:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Create product for the authenticated store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+  /store/products/{id}:
+    patch:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+  /store/products/import:
+    post:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Excel/CSV import (AC-03)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: Import accepted
+  /admin/stores:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Store'
+  /admin/stores/{id}/status:
+    patch:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, active, blocked]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Category:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        parentId: { type: string, format: uuid, nullable: true }
+        nameUz: { type: string }
+        nameRu: { type: string }
+        slug: { type: string }
+        sort: { type: integer }
+        icon: { type: string, nullable: true }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    Store:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        ownerUserId: { type: string, format: uuid }
+        phone: { type: string }
+        region: { type: string }
+        districts:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [pending, active, blocked]
+        logoUrl: { type: string, nullable: true }
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        storeId: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        unit: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        attributes: { type: object, additionalProperties: true }
+        isActive: { type: boolean }
+        price:
+          $ref: '#/components/schemas/ProductPrice'
+    ProductInput:
+      type: object
+      required: [categoryId, name, unit]
+      properties:
+        categoryId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        attributes: { type: object }
+        price: { type: number }
+        currency: { type: string, default: UZS }
+        inStock: { type: boolean }
+    ProductPrice:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        price: { type: number }
+        currency: { type: string }
+        validFrom: { type: string, format: date-time }
+        inStock: { type: boolean }
+    ProductPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+    Error:
+      type: object
+      required: [statusCode, message, timestamp]
+      properties:
+        statusCode: { type: integer }
+        message: { type: string }
+        requestId: { type: string }
+        path: { type: string }
+        timestamp: { type: string, format: date-time }

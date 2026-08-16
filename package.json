@@ -1,0 +1,26 @@
+{
+  "name": "imora",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Imora MVP monorepo — room photo to design, catalog, and store orders",
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @imora/* dev",
+    "build": "pnpm -r --filter @imora/* build",
+    "lint": "pnpm -r --filter @imora/* lint",
+    "typecheck": "pnpm --filter @imora/shared-types build && pnpm -r --filter @imora/* typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "mock:auth": "npx --yes @stoplight/prism-cli mock contracts/auth.openapi.yaml -p 4010",
+    "mock:catalog": "npx --yes @stoplight/prism-cli mock contracts/catalog.openapi.yaml -p 4011",
+    "mock:orders": "npx --yes @stoplight/prism-cli mock contracts/orders.openapi.yaml -p 4012",
+    "mock:design": "npx --yes @stoplight/prism-cli mock contracts/design.openapi.yaml -p 4013"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  }
+}

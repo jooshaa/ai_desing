@@ -1,0 +1,138 @@
+openapi: 3.1.0
+info:
+  title: Imora Design API
+  version: 0.1.0
+  description: AI design module — upload, queue, variants, material tags. Owner Abdunazar.
+servers:
+  - url: http://localhost:3001/api
+tags:
+  - name: Design
+paths:
+  /design/styles:
+    get:
+      tags: [Design]
+      summary: Style library used in prompts
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DesignStyle'
+  /design/requests:
+    post:
+      tags: [Design]
+      security: [{ bearerAuth: [] }]
+      summary: Upload a room photo and enqueue generation (AC-08)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, style]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                roomType: { type: string }
+                style: { type: string }
+                note: { type: string }
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignRequest'
+        '402':
+          description: Free AI quota exhausted (AC-11)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /design/requests/{id}:
+    get:
+      tags: [Design]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignRequest'
+  /design/variants/{id}/materials:
+    get:
+      tags: [Design]
+      summary: Material tags for a variant (orders module matches these to catalog)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DesignMaterial'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    DesignStyle:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        promptHint: { type: string }
+    DesignRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        inputImageUrl: { type: string }
+        roomType: { type: string, nullable: true }
+        style: { type: string }
+        note: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [queued, processing, done, failed]
+        apiCost: { type: number }
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignVariant'
+        createdAt: { type: string, format: date-time }
+    DesignVariant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        imageUrl: { type: string }
+        sort: { type: integer }
+    DesignMaterial:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        variantId: { type: string, format: uuid }
+        tag: { type: string, example: 'wallpaper.warm-beige' }
+        label: { type: string, example: 'devor: oboy, iliq bej' }
+    Error:
+      type: object
+      required: [statusCode, message, timestamp]
+      properties:
+        statusCode: { type: integer }
+        message: { type: string }
+        requestId: { type: string }
+        path: { type: string }
+        timestamp: { type: string, format: date-time }

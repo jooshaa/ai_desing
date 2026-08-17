@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'product_prices' })
+@Index(['productId', 'validFrom'])
 export class ProductPrice {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

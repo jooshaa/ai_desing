@@ -1,6 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'products' })
+@Index(['storeId'])
+@Index(['categoryId'])
+@Index(['isActive'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

@@ -1,7 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { StoreStatus } from '@imora/shared-types';
 
 @Entity({ name: 'stores' })
+@Index(['ownerUserId'], { unique: true })
+@Index(['status'])
 export class Store {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

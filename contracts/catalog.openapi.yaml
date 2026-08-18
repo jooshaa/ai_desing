@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Imora Catalog API
-  version: 0.1.0
+  version: 0.2.0
   description: Catalog module — stores, categories, products, prices. Owner Abdumalik Najot.
 servers:
   - url: http://localhost:3001/api
@@ -26,6 +26,7 @@ paths:
   /products:
     get:
       tags: [Catalog]
+      summary: Products from approved stores only (AC-13)
       parameters:
         - in: query
           name: categoryId
@@ -64,7 +65,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /store/register:
+    post:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Register the caller's store (one per user)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '409':
+          description: This user already has a store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /store/me:
+    get:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: The caller's own store profile
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '404':
+          description: No store registered yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreInput'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
   /store/products:
+    get:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: All of the caller's own products, including inactive ones
+      parameters:
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
     post:
       tags: [Store]
       security: [{ bearerAuth: [] }]
@@ -94,7 +173,98 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductInput'
+              $ref: '#/components/schemas/ProductUpdateInput'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    delete:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Soft-delete (sets isActive=false) — orders keep their snapshot
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Deactivated
+  /store/products/{id}/price:
+    patch:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Quick price update (AC-04) — always appends a new price row, never overwrites history
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceInput'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+  /store/products/{id}/tags:
+    put:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Replace material tags used by design/search to match AI results to this product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tags]
+              properties:
+                tags:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items: { type: string }
+  /store/products/{id}/images:
+    post:
+      tags: [Store]
+      security: [{ bearerAuth: [] }]
+      summary: Upload up to 5 product images (jpeg/png/webp, 5MB each)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items: { type: string, format: binary }
       responses:
         '200':
           content:
@@ -105,7 +275,7 @@ paths:
     post:
       tags: [Store]
       security: [{ bearerAuth: [] }]
-      summary: Excel/CSV import (AC-03)
+      summary: Excel/CSV bulk import (AC-03) — partial success, bad rows reported back
       requestBody:
         required: true
         content:
@@ -117,12 +287,21 @@ paths:
                   type: string
                   format: binary
       responses:
-        '202':
-          description: Import accepted
+        '200':
+          description: Import finished (synchronous — created/failed counts, not queued)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+
   /admin/stores:
     get:
       tags: [Admin]
       security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [pending, active, blocked] }
       responses:
         '200':
           content:
@@ -157,6 +336,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Store'
+  /admin/categories:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+  /admin/categories/{id}:
+    patch:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -178,6 +394,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Category'
+    CategoryInput:
+      type: object
+      required: [nameUz, nameRu, slug]
+      properties:
+        parentId: { type: string, format: uuid, nullable: true }
+        nameUz: { type: string }
+        nameRu: { type: string }
+        slug: { type: string, description: 'lowercase kebab-case' }
+        sort: { type: integer }
+        icon: { type: string }
     Store:
       type: object
       properties:
@@ -193,6 +419,17 @@ components:
           type: string
           enum: [pending, active, blocked]
         logoUrl: { type: string, nullable: true }
+    StoreInput:
+      type: object
+      required: [name, phone, region]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        region: { type: string }
+        districts:
+          type: array
+          items: { type: string }
+        logoUrl: { type: string }
     Product:
       type: object
       properties:
@@ -211,7 +448,7 @@ components:
           $ref: '#/components/schemas/ProductPrice'
     ProductInput:
       type: object
-      required: [categoryId, name, unit]
+      required: [categoryId, name, unit, price]
       properties:
         categoryId: { type: string, format: uuid }
         name: { type: string }
@@ -221,6 +458,26 @@ components:
           type: array
           items: { type: string }
         attributes: { type: object }
+        price: { type: number }
+        currency: { type: string, default: UZS }
+        inStock: { type: boolean }
+    ProductUpdateInput:
+      type: object
+      description: Price is not editable here — see /store/products/{id}/price
+      properties:
+        categoryId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        attributes: { type: object }
+        isActive: { type: boolean }
+    PriceInput:
+      type: object
+      required: [price]
+      properties:
         price: { type: number }
         currency: { type: string, default: UZS }
         inStock: { type: boolean }
@@ -242,6 +499,17 @@ components:
         total: { type: integer }
         page: { type: integer }
         limit: { type: integer }
+    ImportResult:
+      type: object
+      properties:
+        created: { type: integer }
+        failed:
+          type: array
+          items:
+            type: object
+            properties:
+              row: { type: integer }
+              error: { type: string }
     Error:
       type: object
       required: [statusCode, message, timestamp]

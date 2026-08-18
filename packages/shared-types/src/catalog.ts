@@ -42,3 +42,15 @@ export interface ProductDto {
   isActive: boolean;
   price?: ProductPriceDto;
 }
+
+export interface ProductPageDto {
+  items: ProductDto[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ImportResultDto {
+  created: number;
+  failed: { row: number; error: string }[];
+}

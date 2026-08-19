@@ -46,13 +46,25 @@ describe('resolveAiProvider', () => {
     expect(provider.pricePerImageUsd).toBe(PRICE_PER_IMAGE_USD['gemini-3-pro-image']);
   });
 
-  it('marks text-to-image adapters as not structure-preserving', () => {
+  it('marks the stub as not structure-preserving and real editors as preserving', () => {
+    expect(resolveAiProvider(configWith({}), silentLogger).preservesRoomStructure).toBe(false);
+
+    for (const id of ['cloudflare', 'fal', 'gemini']) {
+      expect(
+        resolveAiProvider(configWith({ AI_PROVIDER: id }), silentLogger).preservesRoomStructure,
+      ).toBe(true);
+    }
+  });
+
+  it('defaults cloudflare to klein 4b and rejects an unknown cloudflare model', () => {
+    expect(resolveAiProvider(configWith({ AI_PROVIDER: 'cloudflare' }), silentLogger).model).toBe(
+      'cloudflare-flux-2-klein-4b',
+    );
     expect(
-      resolveAiProvider(configWith({ AI_PROVIDER: 'cloudflare' }), silentLogger)
-        .preservesRoomStructure,
-    ).toBe(false);
-    expect(
-      resolveAiProvider(configWith({ AI_PROVIDER: 'fal' }), silentLogger).preservesRoomStructure,
-    ).toBe(true);
+      resolveAiProvider(
+        configWith({ AI_PROVIDER: 'cloudflare', AI_MODEL: 'cloudflare-flux-1-schnell' }),
+        silentLogger,
+      ).model,
+    ).toBe('cloudflare-flux-2-klein-4b');
   });
 });

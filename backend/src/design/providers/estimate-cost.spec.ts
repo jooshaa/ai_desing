@@ -10,8 +10,8 @@ describe('estimateRequestCostUsd', () => {
   });
 
   it('keeps sub-cent providers from rounding away to zero', () => {
-    expect(estimateRequestCostUsd(PRICE_PER_IMAGE_USD['cloudflare-flux-1-schnell'], 3)).toBe(
-      0.0018,
+    expect(estimateRequestCostUsd(PRICE_PER_IMAGE_USD['cloudflare-flux-2-klein-4b'], 3)).toBe(
+      0.0027,
     );
   });
 

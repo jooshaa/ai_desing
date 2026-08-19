@@ -10,6 +10,7 @@ import { DesignAuthGuard } from './auth/design-auth.guard';
 import { QuotaService } from './quota/quota.service';
 import { DesignStorageService } from './storage/design-storage.service';
 import { DesignUploadsController } from './storage/design-uploads.controller';
+import { DesignPlaygroundController } from './dev/design-playground.controller';
 import { aiDesignProviderFactory } from './providers/provider.factory';
 import { designQueueFactory } from './queue/design-queue.factory';
 
@@ -23,7 +24,7 @@ import { designQueueFactory } from './queue/design-queue.factory';
  */
 @Module({
   imports: [TypeOrmModule.forFeature([DesignRequest, DesignVariant, DesignMaterial])],
-  controllers: [DesignController, DesignUploadsController],
+  controllers: [DesignController, DesignUploadsController, DesignPlaygroundController],
   providers: [
     DesignService,
     DesignGenerationService,

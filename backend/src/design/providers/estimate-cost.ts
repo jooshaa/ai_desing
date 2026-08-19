@@ -13,7 +13,10 @@ export const PRICE_PER_IMAGE_USD = {
   'gemini-3.1-flash-image': 0.067,
   'gemini-3-pro-image': 0.134,
   'fal-flux-kontext-pro': 0.04,
-  'cloudflare-flux-1-schnell': 0.0006,
+  // klein bills per 512x512 tile: 3 output tiles for a 1024x768 image plus one
+  // input tile = 3 * $0.000287 + $0.000059. Free up to 10,000 Neurons/day.
+  'cloudflare-flux-2-klein-4b': 0.0009,
+  'cloudflare-flux-2-klein-9b': 0.0018,
 } as const;
 
 export type PricedModel = keyof typeof PRICE_PER_IMAGE_USD;

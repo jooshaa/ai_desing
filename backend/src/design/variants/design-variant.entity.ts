@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'design_variants' })
+@Index(['requestId', 'sort'])
 export class DesignVariant {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
